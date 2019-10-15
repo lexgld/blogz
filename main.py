@@ -12,20 +12,61 @@ class Blog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120))
     body = db.Column(db.Text)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, title, body):
+    def __init__(self, title, body, owner):
         self.title = title
         self.body = body
+        self.owner = owner
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(12))
-    password = db.Column(db.String(12))
+    username = db.Column(db.String(15))
+    password = db.Column(db.String(15))
     blogs = db.relationship('Blog', backref='owner')
 
     def __init__(self, username, password):
         self.username = username
         self.password = password        
+
+
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user and user.password == password:
+            # todo - remember that the user has logged in
+            return redirect('/newpost')
+        else: 
+            #tell them why login failed
+            return '<h1> failed </h1>'
+
+    return render_template('login.html')
+
+@app.route('/signup', methods=['POST', 'GET'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        #TODO validate data
+
+        existing_user = User.query.filter_by(username=username).first()
+        if not existing_user:
+            new_user = User(username, password)
+            db.session.add(new_user)
+            db.session.commit()
+            #todo remember the user
+            return redirect('/')
+        else:
+        #TODO user already exists message (optional
+            
+            return '<h1> Duplicate user </h1>'
+
+    return render_template('signup.html')
+
 
 @app.route('/')
 def index():
@@ -47,6 +88,7 @@ def new_post():
     if request.method == 'POST':
         blog_title = request.form['blog-title']
         blog_body = request.form['blog-entry']
+        
         title_error = ''
         body_error = ''
 
