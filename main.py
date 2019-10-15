@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, session
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -6,7 +6,7 @@ app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://blogz@localhost:8889/blogz'
 app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app)
-
+app.secret_key = 'iloveguacamole'
 
 class Blog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -21,7 +21,7 @@ class Blog(db.Model):
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(15))
+    username = db.Column(db.String(15), unique=True)
     password = db.Column(db.String(15))
     blogs = db.relationship('Blog', backref='owner')
 
@@ -29,6 +29,11 @@ class User(db.Model):
         self.username = username
         self.password = password        
 
+@app.before_request
+def require_login():
+    allowed_routes = ['login', 'signup']
+    if request.endpoint not in allowed_routes and 'username' not in session:
+        redirect('/login')
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -36,8 +41,9 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
+        
         if user and user.password == password:
-            # todo - remember that the user has logged in
+            session['username'] = username
             return redirect('/newpost')
         else: 
             #tell them why login failed
@@ -58,7 +64,7 @@ def signup():
             new_user = User(username, password)
             db.session.add(new_user)
             db.session.commit()
-            #todo remember the user
+            session['username'] = username
             return redirect('/')
         else:
         #TODO user already exists message (optional
@@ -67,8 +73,12 @@ def signup():
 
     return render_template('signup.html')
 
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    del session['username']
+    return redirect('/blog')
 
-@app.route('/')
+@app.route('/', methods=['POST', 'GET'])
 def index():
     return redirect('/blog')
 
