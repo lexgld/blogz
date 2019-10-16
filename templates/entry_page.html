@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+
+  <h1> {{ind_entry.title}}</h1>
+  <hr/>
+
+{{ind_entry.body}}
+  
+  <br/>
+  <br/>
+  Written by <a href='/blog?owner_id={{ind_entry.owner_id}}'>{{ind_entry.owner.username}}</a>
+
+{% endblock %}
